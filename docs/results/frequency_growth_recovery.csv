@@ -1,0 +1,7 @@
+condition,mode,amplitude,omega_analytic,omega_recovered,omega_rel_error,growth_analytic,growth_recovered,growth_abs_error,growth_rel_error
+noise-free,mode-1,1,2,2,1.909584e-14,-0.05,-0.05,3.106543e-14,6.213086e-13
+noise-free,mode-2,0.6,5,5,2.025047e-14,0.02,0.02,4.662590e-14,2.331295e-12
+noise-free,mode-3,0.35,9.5,9.5,8.227337e-15,-0.12,-0.12,2.299549e-14,1.916291e-13
+noisy 1% (seed 0),mode-1,1,2,1.99867230505,6.638475e-04,-0.05,-0.060446267398,1.044627e-02,2.089253e-01
+noisy 1% (seed 0),mode-2,0.6,5,5.00010944341,2.188868e-05,0.02,0.0180909314206,1.909069e-03,9.545343e-02
+noisy 1% (seed 0),mode-3,0.35,9.5,9.50194816888,2.050704e-04,-0.12,-0.127773583199,7.773583e-03,6.477986e-02
