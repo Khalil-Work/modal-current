@@ -89,7 +89,7 @@ def pod_spectrum_figure(pod, path: Path) -> None:
     )
     ax_left.set_xlabel("POD mode index")
     ax_left.set_ylabel("Singular value")
-    ax_left.set_title(f"Singular values — {SYNTHETIC_NOTE}", fontsize=10)
+    ax_left.set_title("Singular values", fontsize=10)
 
     ax_right.bar(
         indices,
@@ -111,7 +111,7 @@ def pod_spectrum_figure(pod, path: Path) -> None:
     ax_right.set_ylabel("Energy fraction")
     ax_right.set_ylim(0.0, 1.05)
     ax_right.legend(frameon=False, fontsize=8)
-    ax_right.set_title(f"POD energy fractions (sum = 1) — {SYNTHETIC_NOTE}", fontsize=10)
+    ax_right.set_title("POD energy fractions (sum = 1)", fontsize=10)
 
     fig.tight_layout()
     fig.savefig(path, dpi=180, facecolor="white")
@@ -160,7 +160,7 @@ def dmd_eigenvalue_figure(dmd, idx, growth, freq, names, dt, path: Path) -> None
     ax_left.set_ylim(-1.25, 1.25)
     ax_left.set_xlim(-1.25, 1.25)
     ax_left.legend(frameon=False, fontsize=7, loc="upper right")
-    ax_left.set_title(f"Discrete DMD eigenvalues — {SYNTHETIC_NOTE}", fontsize=10)
+    ax_left.set_title("Discrete DMD eigenvalues", fontsize=10)
 
     for k in range(len(names)):
         rec_gamma = dmd.growth_rates[idx[k]]
@@ -191,32 +191,33 @@ def dmd_eigenvalue_figure(dmd, idx, growth, freq, names, dt, path: Path) -> None
                       xytext=(4, 0), textcoords="offset points")
     ax_right.set_xlabel("Growth rate gamma (per unit time)")
     ax_right.set_ylabel("Frequency omega (per unit time)")
-    ax_right.set_title(f"Recovered (circles) vs analytic (stars) — {SYNTHETIC_NOTE}", fontsize=10)
+    ax_right.set_title("Recovered (o) vs analytic (*)", fontsize=10)
 
-    fig.tight_layout()
+    fig.suptitle(f"DMD eigenstructure — {SYNTHETIC_NOTE}", fontsize=10)
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.94))
     fig.savefig(path, dpi=180, facecolor="white")
     plt.close(fig)
 
 
-def reconstruction_figure(u_clean, times, grid, pod8, dmd, dmd_rank_errors, path: Path) -> None:
+def reconstruction_figure(u_clean, times, grid, pod8, dmd, dmd_rank_errors,
+                          sweep_ranks, path: Path) -> None:
     fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(10, 4))
     norm_u = np.linalg.norm(u_clean)
 
-    ranks = np.arange(1, 9)
     pod_errors = [
-        float(np.linalg.norm(pod8.reconstruct(rank=int(r)) - u_clean) / norm_u) for r in ranks
+        float(np.linalg.norm(pod8.reconstruct(rank=int(r)) - u_clean) / norm_u) for r in sweep_ranks
     ]
     floor = max(min(pod_errors + list(dmd_rank_errors)), 1e-17)
-    ax_left.semilogy(ranks, pod_errors, "o-", color=COLOR_TOTAL, lw=1.5, ms=5, label="POD")
+    ax_left.semilogy(sweep_ranks, pod_errors, "o-", color=COLOR_TOTAL, lw=1.5, ms=5, label="POD")
     ax_left.semilogy(
-        ranks, dmd_rank_errors, "s-", color=COLOR_MODES[0], lw=1.5, ms=5,
+        sweep_ranks, dmd_rank_errors, "s-", color=COLOR_MODES[0], lw=1.5, ms=5,
         label="exact DMD (delays=2)",
     )
     ax_left.set_ylim(floor * 0.1, 10.0)
     ax_left.set_xlabel("retained rank r")
     ax_left.set_ylabel("relative reconstruction error")
     ax_left.legend(frameon=False, fontsize=8)
-    ax_left.set_title(f"Training-window reconstruction error — {SYNTHETIC_NOTE}", fontsize=10)
+    ax_left.set_title("Training-window reconstruction error", fontsize=10)
 
     jx = int(np.argmin(np.abs(grid - 0.35)))
     dmd_recon = dmd.reconstruct(times)
@@ -232,7 +233,7 @@ def reconstruction_figure(u_clean, times, grid, pod8, dmd, dmd_rank_errors, path
     ax_right.set_xlabel("t (nondimensional)")
     ax_right.set_ylabel(f"u(x* = {grid[jx]:.3f}, t)")
     ax_right.legend(frameon=False, fontsize=8)
-    ax_right.set_title(f"Reconstruction at a probe point — {SYNTHETIC_NOTE}", fontsize=10)
+    ax_right.set_title("Reconstruction at a probe point", fontsize=10)
 
     fig.tight_layout()
     fig.savefig(path, dpi=180, facecolor="white")
@@ -340,7 +341,10 @@ def main() -> None:
         np.linalg.norm(dmd.reconstruct(times) - u_clean) / np.linalg.norm(u_clean)
     )
 
-    # rank sweep for the error-vs-rank curve
+    # rank sweep for the error-vs-rank curve: honor the numerical rank
+    # (the guard added with the core fixes rejects oversized requests).
+    dmd_probe = compute_dmd(u_clean, dt=DT, delays=DELAYS)
+    sweep_ranks = np.arange(1, min(8, dmd_probe.rank) + 1)
     dmd_rank_errors = [
         float(
             np.linalg.norm(
@@ -349,7 +353,7 @@ def main() -> None:
             )
             / np.linalg.norm(u_clean)
         )
-        for r in range(1, 9)
+        for r in sweep_ranks
     ]
 
     # extrapolation exercise
@@ -404,6 +408,7 @@ def main() -> None:
         pod8,
         dmd,
         dmd_rank_errors,
+        sweep_ranks,
         RESULTS_DIR / "reconstruction_error.png",
     )
     summary["runtime_seconds"]["dmd_and_figures"] = time.perf_counter() - t0
@@ -510,16 +515,17 @@ def main() -> None:
     ax.set_ylabel("u (nondimensional)")
     title = ax.set_title("")
     ax.legend(loc="lower left", fontsize=7, ncol=4, frameon=False)
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.09, right=0.98, top=0.84, bottom=0.13)
 
     def update(frame_number: int):
         j = int(frame_indices[frame_number])
         line_total.set_ydata(u_clean[:, j])
         for k, line in enumerate(mode_lines):
             line.set_ydata(contributions[k, :, j])
+        # Two short lines keep the title inside the canvas; the shared
+        # SYNTHETIC-data caption lives in the figure caption above.
         title.set_text(
-            f"{SYNTHETIC_NOTE}: u(x, t) at t = {times[j]:.2f} "
-            "(3 known modes; generated data, not a physical measurement)"
+            f"u(x, t) at t = {times[j]:.2f} — {SYNTHETIC_NOTE}"
         )
         return (line_total, *mode_lines, title)
 

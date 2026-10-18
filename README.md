@@ -56,8 +56,8 @@ data. All data here is synthetic.
 
 ```bash
 python -m venv .venv && .venv/Scripts/activate   # or source .venv/bin/activate
-pip install -r requirements.txt
-pytest                      # needs requirements-dev.txt
+pip install -r requirements-dev.txt   # runtime + pytest for the documented test flow
+pytest                                # 81 tests (incl. eigenvalue/rank contract regressions)
 python examples/run_verification.py   # regenerates everything in docs/results/
 ```
 
@@ -119,12 +119,17 @@ Result figures: [POD spectrum](docs/results/pod_spectrum.png) ·
 
 ## Verification summary
 
-75 pytest tests, all passing (`pytest -q`). Highlights:
+81 pytest tests, all passing (`pytest -q`; the six added contract tests
+cover alternating-decay Nyquist behavior, zero-eigenvalue impulse
+reconstruction, and numerical-rank rejection). Highlights:
 
 * POD energy fractions sum to 1 to roundoff; noise-free data of 3 modes has
   exactly 3 nonzero singular values at the machine-precision threshold;
   the POD basis reproduces the analytic shape subspace (> 0.99 asserted,
-  1.0 measured).
+  1.0 measured). The POD energy fractions describe the *centered snapshot
+  covariance* (finite-window temporal cross-correlations mix the analytic
+  modes), so they are not the individual analytic amplitude energies; the
+  subspace verification above is the analytic claim.
 * Exact DMD (Hankel-embedded, delays = 2) recovers every known `omega_k`
   and `gamma_k` to < 1e-10 asserted tolerance (spec target 1e-6; measured
   ~1e-14).
