@@ -18,7 +18,8 @@ basis.  For snapshots ``D`` (snapshots as columns) and an embedding depth
    basis, ``A~ = U_r^H Y V_r S_r^{-1}`` (an ``r x r`` matrix);
 5. eigendecompose ``A~ w_k = mu_k w_k`` (discrete eigenvalues);
 6. recover the *exact*-DMD modes ``phi_k = (1/mu_k) Y V_r S_r^{-1} w_k``
-   (with the projected fallback ``U_r w_k`` when ``mu_k = 0``);
+   (with the projected fallback ``U_r w_k`` for zero/numerically singular
+   eigenvalues relative to the projected operator's scale);
 7. compute amplitudes ``b = Phi^+ z_0`` by least squares against the
    embedded first snapshot;
 8. map to continuous eigenvalues ``gamma_k + i omega_k = log(mu_k) / dt``.
@@ -94,9 +95,14 @@ class DMDResult:
 
     @property
     def continuous_eigenvalues(self) -> np.ndarray:
-        """``lambda_k = log(mu_k) / dt`` (growth + i frequency)."""
-        with np.errstate(divide="ignore", invalid="ignore"):
-            return np.log(self.eigenvalues) / self.dt
+        """Principal complex log(mu)/dt; zero eigenvalues raise ValueError.
+
+        Negative real eigenvalues have Nyquist angular frequency pi/dt,
+        not NaN. No finite continuous-time generator exists for mu=0.
+        """
+        if np.any(self.eigenvalues == 0):
+            raise ValueError("zero eigenvalues have no finite continuous-time logarithm; use reconstruct_training()")
+        return np.log(self.eigenvalues.astype(complex)) / self.dt
 
     @property
     def growth_rates(self) -> np.ndarray:
@@ -109,15 +115,26 @@ class DMDResult:
         return self.continuous_eigenvalues.imag
 
     def reconstruct(self, times) -> np.ndarray:
-        """Reconstruct (or extrapolate to) the field at ``times``."""
+        """Principal-log continuous reconstruction at finite real times.
+
+        Fits containing a zero eigenvalue require discrete reconstruction
+        via reconstruct_training(); their continuous/backward dynamics
+        are undefined and raise explicitly instead of producing NaNs.
+        """
         t = validate_time_vector(times, name="times")
         expo = np.exp(np.outer(self.continuous_eigenvalues, t - self.t0))
         weighted = self.modes * self.amplitudes[np.newaxis, :]
         return (weighted @ expo).real
 
     def reconstruct_training(self) -> np.ndarray:
-        """Reconstruct the training snapshots ``t0 + j * dt``."""
-        return self.reconstruct(self.t0 + self.dt * np.arange(self.n_snapshots))
+        """Discrete training reconstruction using mu**j, including zero modes.
+
+        At j=0 every mode has multiplier 1 (including 0**0); a zero mode
+        vanishes at j>=1. No continuous logarithm is evaluated.
+        """
+        powers = self.eigenvalues.astype(complex)[:, np.newaxis] ** np.arange(self.n_snapshots)
+        weighted = self.modes * self.amplitudes[np.newaxis, :]
+        return (weighted @ powers).real
 
 
 def compute_dmd(
@@ -136,8 +153,9 @@ def compute_dmd(
     dt : float
         Sampling interval (strictly positive, same time units as ``t0``).
     rank : int, optional
-        Truncation rank of the SVD of (the embedded) ``X``.  ``None``
-        (default) uses the machine-precision numerical rank.
+        Truncation rank of the SVD of (the embedded) ``X``. ``None``
+        uses the machine-precision numerical rank. Explicit ranks above
+        that threshold raise before division by singular values.
     delays : int, default 1
         Number of stacked time-delayed copies (Hankel embedding depth).
         ``delays=1`` is plain exact DMD on the raw snapshots; ``delays >= 2``
@@ -163,8 +181,9 @@ def compute_dmd(
     x_mat = embedded[:, :-1]
     y_mat = embedded[:, 1:]
     u_mat, s_vals, vh = np.linalg.svd(x_mat, full_matrices=False)
+    rank_available = numerical_rank(s_vals, x_mat.shape)
     if rank is None:
-        r = numerical_rank(s_vals, x_mat.shape)
+        r = rank_available
         if r == 0:
             raise ValueError("data has zero numerical rank; cannot compute DMD")
     else:
@@ -173,15 +192,22 @@ def compute_dmd(
         if int(rank) > s_vals.size:
             raise ValueError(f"rank must be <= {s_vals.size}; got {int(rank)}")
         r = int(rank)
+        if r > rank_available:
+            raise ValueError(f"requested rank {r} exceeds numerical rank {rank_available}; reduce rank")
     u_r = u_mat[:, :r]
     s_r = s_vals[:r]
     v_r = vh[:r].conj().T
     a_tilde = (u_r.conj().T @ y_mat @ v_r) / s_r[np.newaxis, :]
     eigenvalues, w = np.linalg.eig(a_tilde)
     pre = ((y_mat @ v_r) / s_r[np.newaxis, :]) @ w
-    with np.errstate(divide="ignore", invalid="ignore"):
-        modes_emb = pre / eigenvalues[np.newaxis, :]
-    zero_mu = eigenvalues == 0.0
+    # Dividing by an eigenvalue at the operator's roundoff scale can destroy
+    # an otherwise valid impulse mode. Use its projected eigenvector there;
+    # retain the fitted eigenvalue itself (no eigenvalue clipping).
+    zero_mu = np.abs(eigenvalues) <= (
+        np.finfo(float).eps * max(a_tilde.shape) * np.linalg.norm(a_tilde, ord=2)
+    )
+    modes_emb = np.empty_like(pre)
+    modes_emb[:, ~zero_mu] = pre[:, ~zero_mu] / eigenvalues[np.newaxis, ~zero_mu]
     if np.any(zero_mu):
         modes_emb[:, zero_mu] = u_r @ w[:, zero_mu]
     amplitudes = np.linalg.lstsq(modes_emb, embedded[:, 0], rcond=None)[0]
