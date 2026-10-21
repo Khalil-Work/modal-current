@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/banner.svg" alt="Modal Current banner: structural mode shapes and eigenvalue markers on charcoal, wordmark left" width="100%">
+<img src="docs/banner.png" alt="Modal Current banner: structural mode shapes and eigenvalue markers on charcoal, wordmark left" width="100%">
 
 # 🎼 Modal Current
 
