@@ -11,13 +11,13 @@ Dynamic Mode Decomposition, verified against a synthetic spatiotemporal field wh
 modal frequencies and growth rates are known by construction — recovered to ~1e-14
 relative error (noise-free).**
 
-[![tests](https://github.com/khalil-official/modal-current/actions/workflows/ci.yml/badge.svg)](https://github.com/khalil-official/modal-current/actions/workflows/ci.yml)
+[![tests](https://github.com/khalil-work/modal-current/actions/workflows/ci.yml/badge.svg)](https://github.com/khalil-work/modal-current/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](requirements.txt)
 [![tests](https://img.shields.io/badge/tests-81%20passing-brightgreen.svg)](tests)
 [![recovery](https://img.shields.io/badge/DMD%20recovery-%7E1e--14%20rel-orange.svg)](docs/verification.md)
 [![deps](https://img.shields.io/badge/core-NumPy%20only-9cf.svg)](requirements.txt)
-[![repo stars](https://img.shields.io/github/stars/khalil-official/modal-current?style=flat&color=yellow)](https://github.com/khalil-official/modal-current/stargazers)
+[![repo stars](https://img.shields.io/github/stars/khalil-work/modal-current?style=flat&color=yellow)](https://github.com/khalil-work/modal-current/stargazers)
 
 [Quick start](#-quick-start) · [Method](#-method-summary) · [Animation](#%EF%B8%8F-results-gallery) · [Metrics](#-measured-recovery-metrics-synthetic-demonstration-data) · [References](#-references-by-title)
 
