@@ -214,4 +214,4 @@ unless stated. Full machine-readable record:
 
 ## 🔑 License
 
-MIT — see [LICENSE](LICENSE). Copyright (c) 2026 MOHAMMED AHMED.
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 KHALIL.
