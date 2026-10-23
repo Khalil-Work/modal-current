@@ -19,7 +19,7 @@ relative error (noise-free).**
 [![deps](https://img.shields.io/badge/core-NumPy%20only-9cf.svg)](requirements.txt)
 [![repo stars](https://img.shields.io/github/stars/khalil-work/modal-current?style=flat&color=yellow)](https://github.com/khalil-work/modal-current/stargazers)
 
-[Quick start](#-quick-start) · [Method](#-method-summary) · [Animation](#%EF%B8%8F-results-gallery) · [Metrics](#-measured-recovery-metrics-synthetic-demonstration-data) · [References](#-references-by-title)
+[Homepage](https://khalil-work.github.io) · [Quick start](#-quick-start) · [Method](#-method-summary) · [Animation](#%EF%B8%8F-results-gallery) · [Metrics](#-measured-recovery-metrics-synthetic-demonstration-data) · [References](#-references-by-title)
 
 </div>
 
